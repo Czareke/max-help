@@ -13,6 +13,7 @@ const AppError=require('./utils/appError')
 const express = require('express');
 const dotenv = require('dotenv');
 const cors = require('cors');
+const path = require('path');
 // dotenv.config(); // Load environment variables from .env
 const morgan = require('morgan');
 const { Module } = require('module');
@@ -32,8 +33,14 @@ const globalErrorHandler = require('./controllers/errorController');
 // Middleware
 app.use(morgan('dev'));
 app.use(express.json());
+app.use('/images', express.static(path.join(__dirname, 'public/images')));
 app.use(express.urlencoded({ extended: true })); // Parse URL-encoded payload
-app.use(cors({ origin: 'http://localhost:3000' })); 
+app.use(cors({
+  origin: 'http://localhost:3000', // Replace with your frontend's origin
+  methods: ['GET', 'POST', 'PATCH', 'DELETE'], // Allowed methods
+  credentials: true, // Allow cookies if needed
+}));
+
 // Mount routes
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/catalogues', catalogueRoutes);

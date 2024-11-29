@@ -1,8 +1,8 @@
-'use client'
-import React, { useState } from 'react';
+'use client';
+import React, { useState, useEffect } from 'react';
 
 interface Catalogue {
-  id: number;
+  id: string; // Match backend's ID type
   name: string;
   description: string;
   image: string;
@@ -18,7 +18,29 @@ const Page: React.FC = () => {
   });
 
   const [isEditing, setIsEditing] = useState(false);
-  const [editingId, setEditingId] = useState<number | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+
+  // Fetch catalogues from backend
+  useEffect(() => {
+    const fetchCatalogues = async () => {
+      try {
+        const response = await fetch('http://localhost:5000/api/v1/catalogues'); // Use correct backend URL
+        console.log('Response object:', response); // Debug log to inspect the response object
+
+        if (!response.ok) {
+          throw new Error(`Failed to fetch catalogues: ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        console.log('Fetched data:', data); // Debug log for the response JSON
+        setCatalogues(data.data.catalogs);
+      } catch (error) {
+        console.error('Error while fetching catalogues:', error); // Debug error log
+      }
+    };
+
+    fetchCatalogues();
+  }, []);
 
   // Handle input changes
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -35,48 +57,76 @@ const Page: React.FC = () => {
     if (file) {
       setFormData({
         ...formData,
-        image: URL.createObjectURL(file),
+        image: file,
       });
     }
   };
 
   // Handle form submission
-  const handleFormSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleFormSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
-    if (isEditing && editingId !== null) {
-      setCatalogues((prev) =>
-        prev.map((cat) =>
-          cat.id === editingId ? { ...cat, ...formData } : cat
-        )
-      );
-      setIsEditing(false);
-      setEditingId(null);
-    } else {
-      const newCatalogue: Catalogue = {
-        id: Date.now(),
-        ...formData,
-      };
-      setCatalogues([...catalogues, newCatalogue]);
-    }
+    const formDataToSend = new FormData();
+    formDataToSend.append('name', formData.name);
+    formDataToSend.append('description', formData.description);
+    if (formData.image) formDataToSend.append('image', formData.image);
 
-    // Clear form
-    setFormData({ name: '', description: '', image: '' });
+    try {
+      if (isEditing && editingId) {
+        // Update catalogue
+        const response = await fetch(`http://localhost:5000/api/v1/catalogues/${editingId}`, {
+          method: 'PATCH',
+          body: formDataToSend,
+        });
+        if (!response.ok) throw new Error('Failed to update catalogue');
+        const updatedCatalogue = await response.json();
+
+        setCatalogues((prev) =>
+          prev.map((cat) => (cat.id === editingId ? updatedCatalogue.data.catalog : cat))
+        );
+        setIsEditing(false);
+        setEditingId(null);
+      } else {
+        // Create new catalogue
+        const response = await fetch('http://localhost:5000/api/v1/catalogues', {
+          method: 'POST',
+          body: formDataToSend,
+        });
+        console.log('POST Response:', response); // Debug log for create response
+        if (!response.ok) throw new Error('Failed to create catalogue');
+        const newCatalogue = await response.json();
+        console.log('Created catalogue:', newCatalogue); // Debug log for created data
+
+        setCatalogues((prev) => [...prev, newCatalogue.data.catalog]);
+      }
+      setFormData({ name: '', description: '', image: '' });
+    } catch (error) {
+      console.error('Error during form submission:', error); // Debug error log
+    }
   };
 
   // Handle edit
-  const handleEdit = (id: number) => {
+  const handleEdit = (id: string) => {
     const catalogue = catalogues.find((cat) => cat.id === id);
     if (catalogue) {
-      setFormData(catalogue);
+      setFormData({ name: catalogue.name, description: catalogue.description, image: '' });
       setIsEditing(true);
       setEditingId(id);
     }
   };
 
   // Handle delete
-  const handleDelete = (id: number) => {
-    setCatalogues((prev) => prev.filter((cat) => cat.id !== id));
+  const handleDelete = async (id: string) => {
+    try {
+      const response = await fetch(`http://localhost:5000/api/v1/catalogues/${id}`, {
+        method: 'DELETE',
+      });
+      console.log('DELETE Response:', response); // Debug log for delete response
+      if (!response.ok) throw new Error('Failed to delete catalogue');
+      setCatalogues((prev) => prev.filter((cat) => cat.id !== id));
+    } catch (error) {
+      console.error('Error while deleting catalogue:', error); // Debug error log
+    }
   };
 
   return (
@@ -133,16 +183,7 @@ const Page: React.FC = () => {
           />
         </div>
 
-        {formData.image && (
-          <div className="mb-4">
-            <img src={formData.image} alt="Preview" className="w-32 h-32 object-cover rounded-md" />
-          </div>
-        )}
-
-        <button
-          type="submit"
-          className="bg-blue-600 text-white px-4 py-2 rounded-md"
-        >
+        <button type="submit" className="bg-blue-600 text-white px-4 py-2 rounded-md">
           {isEditing ? 'Update Catalogue' : 'Add Catalogue'}
         </button>
       </form>

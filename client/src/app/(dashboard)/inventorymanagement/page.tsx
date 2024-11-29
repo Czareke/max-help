@@ -1,13 +1,11 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import axios from "axios"; // Ensure Axios is installed and imported
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 
 const AdminProductManagement = () => {
-  const [products, setProducts] = useState([
-    { id: 1, name: "Product A", price: 20, stock: 50, category: "Category 1" },
-    { id: 2, name: "Product B", price: 15, stock: 5, category: "Category 2" },
-  ]);
+  const [products, setProducts] = useState([]);
   const [form, setForm] = useState({
     id: null,
     name: "",
@@ -18,6 +16,22 @@ const AdminProductManagement = () => {
     image: null,
   });
   const [editing, setEditing] = useState(false);
+  const [error, setError] = useState(null);
+
+  // Fetch products from backend
+  useEffect(() => {
+    const fetchProducts = async () => {
+      try {
+        const response = await axios.get("/api/inventory/products");
+        setProducts(response.data.data.products);
+      } catch (err) {
+        console.error("Error fetching products:", err);
+        setError("Unable to fetch products. Please try again later.");
+      }
+    };
+
+    fetchProducts();
+  }, []);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -28,15 +42,38 @@ const AdminProductManagement = () => {
     setForm({ ...form, image: e.target.files[0] });
   };
 
-  const handleFormSubmit = (e) => {
+  const handleFormSubmit = async (e) => {
     e.preventDefault();
-    if (editing) {
-      setProducts(products.map((p) => (p.id === form.id ? form : p)));
-    } else {
-      setProducts([...products, { ...form, id: Date.now() }]);
+    const formData = new FormData();
+    formData.append("name", form.name);
+    formData.append("description", form.description);
+    formData.append("price", form.price);
+    formData.append("stock", form.stock);
+    formData.append("category", form.category);
+    if (form.image) formData.append("image", form.image);
+
+    try {
+      if (editing) {
+        await axios.put(`/api/inventory/products/${form.id}`, formData, {
+          headers: { "Content-Type": "multipart/form-data" },
+        });
+      } else {
+        await axios.post("/api/inventory/products", formData, {
+          headers: { "Content-Type": "multipart/form-data" },
+        });
+      }
+
+      // Refresh products
+      const response = await axios.get("/api/inventory/products");
+      setProducts(response.data.data.products);
+
+      // Reset form and exit editing mode
+      setForm({ id: null, name: "", description: "", price: "", stock: "", category: "", image: null });
+      setEditing(false);
+    } catch (err) {
+      console.error("Error submitting form:", err);
+      setError("Unable to save product. Please try again later.");
     }
-    setForm({ id: null, name: "", description: "", price: "", stock: "", category: "", image: null });
-    setEditing(false);
   };
 
   const handleEdit = (product) => {
@@ -44,13 +81,20 @@ const AdminProductManagement = () => {
     setEditing(true);
   };
 
-  const handleDelete = (id) => {
-    setProducts(products.filter((p) => p.id !== id));
+  const handleDelete = async (id) => {
+    try {
+      await axios.delete(`/api/inventory/products/${id}`);
+      setProducts(products.filter((p) => p.id !== id));
+    } catch (err) {
+      console.error("Error deleting product:", err);
+      setError("Unable to delete product. Please try again later.");
+    }
   };
 
   return (
     <div className="ml-32 mt-10">
       <h1 className="text-xl font-bold mb-4">Admin Product Management</h1>
+      {error && <p className="text-red-500">{error}</p>}
 
       <form onSubmit={handleFormSubmit} className="mb-6">
         <div className="grid grid-cols-2 gap-4">

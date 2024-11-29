@@ -1,12 +1,13 @@
-    const Product = require('../Model/productModel');
-    const catchAsync = require('../utils/catchAsync');
-    const AppError = require('../utils/appError');
+const Product = require('../Model/productModel');
+const catchAsync = require('../utils/catchAsync');
+const AppError = require('../utils/appError');
 
-// Retrieve all products across all catalogs
+// Retrieve all products
 exports.getAllProducts = catchAsync(async (req, res, next) => {
     const products = await Product.find();
     res.status(200).json({
         status: 'success',
+        results: products.length,
         data: { products },
     });
 });
@@ -25,12 +26,20 @@ exports.getProductById = catchAsync(async (req, res, next) => {
 
 // Create a new product entry
 exports.createProduct = catchAsync(async (req, res, next) => {
-    const newProduct = await Product.create(req.body);
-    res.status(201).json({
-        status: 'success',
-        data: { product: newProduct },
-    });
+    try {
+        console.log("Received payload:", req.body); // Log incoming data
+
+        const newProduct = await Product.create(req.body);
+        res.status(201).json({
+            status: 'success',
+            data: { product: newProduct },
+        });
+    } catch (err) {
+        console.error("Error creating product:", err); // Log error details
+        next(new AppError("Failed to create product", 500)); // Send a meaningful error
+    }
 });
+
 
 // Update a product by ID
 exports.updateProduct = catchAsync(async (req, res, next) => {
