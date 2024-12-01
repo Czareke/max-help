@@ -1,49 +1,15 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
-import axios from "axios";
+import React, { useState } from "react";
 
 const UserProductPage = () => {
-  const [products, setProducts] = useState([]);
+  const [products] = useState([
+    { id: 1, name: "Product A", price: 20, stock: 50, category: "Category 1" },
+    { id: 2, name: "Product B", price: 15, stock: 0, category: "Category 2" },
+  ]);
   const [search, setSearch] = useState("");
   const [filterCategory, setFilterCategory] = useState("");
-  const [newProduct, setNewProduct] = useState({
-    name: "",
-    price: "",
-    stock: "",
-    category: "",
-  });
 
-  // Fetch products from backend
-  useEffect(() => {
-    const fetchProducts = async () => {
-        try {
-            const response = await axios.get("http://localhost:5000/api/products");
-            setProducts(response.data.data.products);
-        } catch (error) {
-            console.error("Error fetching products:", error.response?.data || error.message);
-        }
-    };
-    fetchProducts();
-}, []);
-
-
-  // Handle adding a new product
-  const handleAddProduct = async (e: React.FormEvent) => {
-    e.preventDefault();
-    console.log("Adding product:", newProduct); // Log before sending request
-
-    try {
-        const response = await axios.post("http://localhost:5000/api/products", newProduct);
-        setProducts((prev) => [...prev, response.data.data.product]);
-        setNewProduct({ name: "", price: "", stock: "", category: "" }); // Reset form
-    } catch (error) {
-        console.error("Error adding product:", error.response?.data || error.message); // Improved logging
-    }
-};
-
-
-  // Filter products based on search and category
   const filteredProducts = products.filter((product) => {
     return (
       product.name.toLowerCase().includes(search.toLowerCase()) &&
@@ -90,43 +56,6 @@ const UserProductPage = () => {
           </div>
         ))}
       </div>
-
-      <form onSubmit={handleAddProduct} className="mt-6">
-        <h2 className="text-lg font-semibold mb-4">Add New Product</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
-          <input
-            type="text"
-            placeholder="Product Name"
-            value={newProduct.name}
-            onChange={(e) => setNewProduct({ ...newProduct, name: e.target.value })}
-            className="border p-2 rounded"
-          />
-          <input
-            type="number"
-            placeholder="Price"
-            value={newProduct.price}
-            onChange={(e) => setNewProduct({ ...newProduct, price: e.target.value })}
-            className="border p-2 rounded"
-          />
-          <input
-            type="number"
-            placeholder="Stock"
-            value={newProduct.stock}
-            onChange={(e) => setNewProduct({ ...newProduct, stock: e.target.value })}
-            className="border p-2 rounded"
-          />
-          <input
-            type="text"
-            placeholder="Category"
-            value={newProduct.category}
-            onChange={(e) => setNewProduct({ ...newProduct, category: e.target.value })}
-            className="border p-2 rounded"
-          />
-        </div>
-        <button type="submit" className="bg-blue-500 text-white px-4 py-2 rounded">
-          Add Product
-        </button>
-      </form>
     </div>
   );
 };

@@ -89,15 +89,16 @@ exports.updateCatalog = catchAsync(async (req, res, next) => {
 });
 
 // Delete a catalogue
-exports.deleteCatalog = catchAsync(async (req, res, next) => {
-    const catalog = await Catalog.findByIdAndDelete(req.params.id);
-
-    if (!catalog) {
+    exports.deleteCatalog = catchAsync(async (req, res, next) => {
+        console.log('Attempting to delete catalog with ID:', req.params.id); // Debug log
+        const catalog = await Catalog.findByIdAndDelete(req.params.id);
+    
+        if (!catalog) {
+        console.error('Catalog not found with ID:', req.params.id);
         return next(new AppError('No catalog found with that ID', 404));
-    }
-
-    res.status(204).json({
-        status: 'success',
-        data: null,
+        }
+    
+        console.log('Catalog deleted successfully:', catalog); // Debug log
+        res.status(204).json({ status: 'success', data: null });
     });
-});
+    
